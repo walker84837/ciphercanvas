@@ -23,6 +23,7 @@ clap = { version = "4.5.1", features = ["derive"] }
 directories = "6.0.0"
 image = "0.24.9"
 log = "0.4.21"
+miette = { version = "7.5.0", features = ["fancy"] }
 mlua = { version = "0.10.3", features = ["async", "luajit", "send"] }
 qrcode = "0.12"
 resvg = "0.40.0"
