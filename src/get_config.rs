@@ -25,7 +25,8 @@ where
     D: Into<Cow<'a, str>>,
 {
     match config.get(key).and_then(|k| k.get(second_key)) {
-        Some(v) => v.as_str()
+        Some(v) => v
+            .as_str()
             .map(Cow::from)
             .unwrap_or_else(|| {
                 panic!(

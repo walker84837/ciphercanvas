@@ -1,21 +1,18 @@
-use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use directories::ProjectDirs;
 use log::{info, warn};
-use qrcode::{EcLevel, QrCode, render::svg};
-use std::{
-    fmt,
-    fs::File,
-    io::{self, BufReader, Read},
-    path::PathBuf,
-};
+use miette::{Context, IntoDiagnostic, Result};
+use qrcode::{render::svg, EcLevel, QrCode};
+use std::{fmt, path::PathBuf};
+use tokio::io::AsyncReadExt;
 
 mod get_config;
 mod image_ops;
+mod lua_api;
 
 use crate::{
     get_config::{get_config_int, get_config_str},
-    image_ops::save_image,
+    image_ops::async_save_image,
 };
 
 /// Mature and modular CLI tool to generate QR codes and customize behavior via scripting.
@@ -125,27 +122,30 @@ async fn main() -> Result<()> {
                 info!("Using default configuration file: {:?}", default_path);
                 default_path
             } else {
-                anyhow::bail!(
+                miette::bail!(
                     "Unable to determine the default configuration directory. Specify a config file using --config."
                 );
             }
         }
     };
 
-    // Read configuration from file or stdin (if "-" is provided)
+    // Read configuration from file or from stdin (if "-" is provided)
     let config_str = if config_path.to_string_lossy() == "-" {
         let mut input = String::new();
-        io::stdin()
+        tokio::io::stdin()
             .read_to_string(&mut input)
-            .context("Failed to read configuration from stdin")?;
+            .await
+            .into_diagnostic()
+            .with_context(|| "Failed to read configuration from stdin")?;
         input
     } else {
-        read_config(&config_path)?
+        read_config(&config_path).await?
     };
     info!("Configuration loaded successfully.");
 
-    let toml_config: toml::Value =
-        toml::from_str(&config_str).context("Failed to parse the TOML configuration file")?;
+    let toml_config: toml::Value = toml::from_str(&config_str)
+        .into_diagnostic()
+        .with_context(|| "Failed to parse the TOML configuration file")?;
     info!("TOML configuration parsed successfully.");
 
     // Process the chosen subcommand
@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
             let foreground =
                 get_config_str(&toml_config, "colors", "foreground", Consts::FOREGROUND);
             let background =
-                get_config_str(&toml_config, "colors", "background", Consts::BACKGROUND);
+                get_config_str(&toml_config, "colors", "background", Consts::FOREGROUND);
             let ssid = ssid.unwrap_or_else(|| {
                 toml_config
                     .get("wifi")
@@ -182,7 +182,8 @@ async fn main() -> Result<()> {
                 .get("qrcode")
                 .and_then(|q| q.get("password"))
                 .and_then(|p| p.as_str())
-                .context("Failed to retrieve the QR code password from configuration. Please check your config file and ensure `[qrcode] password = \"...\"` is present.")?;
+                .into_diagnostic()
+                .with_context(|| "Failed to retrieve the QR code password from configuration. Please check your config file and ensure `[qrcode] password = \"...\"` is present.")?;
             info!("Password retrieved from configuration.");
 
             let contents_to_encode = format!(
@@ -194,7 +195,8 @@ async fn main() -> Result<()> {
 
             let qrcode =
                 QrCode::with_error_correction_level(contents_to_encode.as_bytes(), EcLevel::H)
-                    .context("Failed to generate the QR code")?;
+                    .into_diagnostic()
+                    .with_context(|| "Failed to generate the QR code")?;
             info!("QR code generated successfully.");
 
             let image = qrcode
@@ -206,32 +208,35 @@ async fn main() -> Result<()> {
             info!("QR code rendered to image.");
 
             if let Some(output_path) = output {
-                save_image(&output_path, &export_format, &image, size)
-                    .context("Failed to save the generated QR code image")?;
-                info!("Image saved successfully to {:?}", output_path);
+                async_save_image(output_path, export_format.into(), image, size)
+                    .await
+                    .into_diagnostic()
+                    .with_context(|| "Failed to save the generated QR code image")?;
+                info!("Image saved successfully.");
             } else {
                 println!("{}", image);
                 info!("Image output to stdout.");
             }
         }
         Commands::Script { script } => {
-            // TODO: expand this
             info!("Executing Lua script: {:?}", script);
-            let lua_script = std::fs::read_to_string(&script)
-                .with_context(|| format!("Failed to read script file: {:?}", script))?;
-            let lua = mlua::Lua::new();
-            anyhow::Context::context(lua.load(&lua_script).exec(), "Error executing Lua script")?;
+            lua_api::execute_script(script)
+                .await
+                .into_diagnostic()
+                .with_context(|| "Error executing Lua script")?;
             info!("Lua script executed successfully.");
         }
         Commands::SaveSettings { settings } => {
             if let Some(proj_dirs) = ProjectDirs::from("org", "winlogon", "ciphercanvas") {
                 let config_dir = proj_dirs.config_dir();
                 let settings_path = config_dir.join("settings.toml");
-                std::fs::write(&settings_path, settings)
+                tokio::fs::write(&settings_path, settings)
+                    .await
+                    .into_diagnostic()
                     .with_context(|| format!("Failed to save settings to {:?}", settings_path))?;
                 info!("Settings saved successfully to {:?}", settings_path);
             } else {
-                anyhow::bail!(
+                miette::bail!(
                     "Unable to determine default configuration directory to save settings."
                 );
             }
@@ -241,16 +246,13 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-/// Reads the configuration file from the given path.
-fn read_config(config_path: &PathBuf) -> Result<String> {
+/// Reads the configuration file asynchronously from the given path.
+async fn read_config(config_path: &PathBuf) -> Result<String> {
     info!("Reading configuration file from {:?}", config_path);
-    let f = File::open(config_path)
-        .with_context(|| format!("Failed to open config file: {:?}", config_path))?;
-    let mut reader = BufReader::new(f);
-    let mut config_str = String::new();
-    reader
-        .read_to_string(&mut config_str)
-        .context("Failed to read the configuration file")?;
+    let config_str = tokio::fs::read_to_string(config_path)
+        .await
+        .into_diagnostic()
+        .with_context(|| format!("Failed to read configuration file from {:?}", config_path))?;
     info!(
         "Configuration file read successfully from {:?}",
         config_path
