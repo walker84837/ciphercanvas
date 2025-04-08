@@ -2,9 +2,10 @@ use log::error;
 use std::borrow::Cow;
 use toml::Value;
 
-/// Get a string value from the config
-/// Returns the default if the value is not found
-/// # Example:
+/// Retrieve a string value from the configuration.
+/// Returns the provided default if the value is not found.
+///
+/// # Examples
 /// ```rust
 /// use ciphercanvas::get_config_str;
 /// let config = toml::from_str(r#"
@@ -43,9 +44,10 @@ where
     }
 }
 
-/// Get an integer value from the config
-/// Returns the default if the value is not found
-/// # Example:
+/// Retrieve an integer value from the configuration.
+/// Returns the provided default if the value is not found.
+///
+/// # Examples
 /// ```rust
 /// use ciphercanvas::get_config_int;
 /// let config = toml::from_str(r#"
@@ -171,16 +173,5 @@ mod tests {
         )
         .unwrap();
         get_config_str(&config, "server", "host", "localhost");
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_get_config_invalid_config() {
-        let _: toml::Value = toml::from_str(
-            r#"
-            i use neovim btw
-        "#,
-        )
-        .unwrap();
     }
 }

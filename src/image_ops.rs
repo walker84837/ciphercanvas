@@ -9,12 +9,12 @@ use std::{
 use tiny_skia::{Pixmap, Transform};
 use usvg::{Options, Tree, fontdb};
 
+/// Load and render SVG content into a Pixmap of the specified size.
 fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap> {
     info!("Loading SVG content with size {}x{}", size, size);
 
     let options = Options::default();
     let fontdb = fontdb::Database::new();
-
     let tree: Tree = Tree::from_data(contents, &options, &fontdb).with_context(|| {
         format!(
             "Failed to create SVG tree from data of size {}x{}",
@@ -32,10 +32,13 @@ fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap> {
     Ok(pixmap)
 }
 
-/// Save an image to a file
-/// Fails when the format is not supported, or when saving fails
-/// # Examples:
-/// Save an SVG image
+/// Save an image to a file. Supports both SVG and PNG output formats.
+///
+/// When processing a PNG image, if the requested size is small (<256px), a warning is logged.
+///
+/// # Usage Examples
+///
+/// Save an SVG image:
 /// ```rust
 /// use ciphercanvas::save_image;
 /// let image = "<svg>...</svg>";
@@ -45,7 +48,7 @@ fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap> {
 /// save_image(&output, &format, &image, size).unwrap();
 /// ```
 ///
-/// Save a PNG image
+/// Save a PNG image:
 /// ```rust
 /// use ciphercanvas::save_image;
 /// let image = "<svg>...</svg>";
@@ -98,4 +101,17 @@ pub fn save_image(output: &PathBuf, format: &str, image: &str, size: u32) -> Res
 
     info!("Image saved successfully to {:?}", file_path);
     Ok(())
+}
+
+/// An asynchronous wrapper for `save_image` for heavy I/O operations.
+/// This function offloads blocking work to a separate thread using tokio's spawn_blocking.
+pub async fn async_save_image(
+    output: PathBuf,
+    format: String,
+    image: String,
+    size: u32,
+) -> Result<()> {
+    tokio::task::spawn_blocking(move || save_image(&output, &format, &image, size))
+        .await
+        .expect("Task panicked")
 }
