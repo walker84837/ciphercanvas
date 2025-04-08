@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use directories::ProjectDirs;
 use log::{info, warn};
 use miette::{Context, IntoDiagnostic, Result};
-use qrcode::{render::svg, EcLevel, QrCode};
+use qrcode::{EcLevel, QrCode, render::svg};
 use std::{fmt, path::PathBuf};
 use tokio::io::AsyncReadExt;
 
@@ -182,8 +182,7 @@ async fn main() -> Result<()> {
                 .get("qrcode")
                 .and_then(|q| q.get("password"))
                 .and_then(|p| p.as_str())
-                .into_diagnostic()
-                .with_context(|| "Failed to retrieve the QR code password from configuration. Please check your config file and ensure `[qrcode] password = \"...\"` is present.")?;
+                .ok_or(miette::miette!("QR code password missing in configuration"))?;
             info!("Password retrieved from configuration.");
 
             let contents_to_encode = format!(
@@ -210,8 +209,7 @@ async fn main() -> Result<()> {
             if let Some(output_path) = output {
                 async_save_image(output_path, export_format.into(), image, size)
                     .await
-                    .into_diagnostic()
-                    .with_context(|| "Failed to save the generated QR code image")?;
+                    .map_err(|e| miette::miette!(e))?;
                 info!("Image saved successfully.");
             } else {
                 println!("{}", image);
@@ -222,7 +220,6 @@ async fn main() -> Result<()> {
             info!("Executing Lua script: {:?}", script);
             lua_api::execute_script(script)
                 .await
-                .into_diagnostic()
                 .with_context(|| "Error executing Lua script")?;
             info!("Lua script executed successfully.");
         }
