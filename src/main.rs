@@ -113,12 +113,12 @@ fn main() -> Result<()> {
     let image = qrcode
         .render()
         .min_dimensions(size, size)
-        .dark_color(svg::Color(foreground))
-        .light_color(svg::Color(background))
+        .dark_color(svg::Color(&foreground))
+        .light_color(svg::Color(&background))
         .build();
     info!("QR code rendered to image");
 
-    save_image(&args.output, export_format, &image, size)?;
+    save_image(&args.output, &export_format, &image, size)?;
     info!("Image saved successfully to {:?}", args.output);
 
     Ok(())

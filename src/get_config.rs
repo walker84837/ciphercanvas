@@ -1,4 +1,5 @@
 use log::error;
+use std::borrow::Cow;
 use toml::Value;
 
 /// Get a string value from the config
@@ -13,25 +14,31 @@ use toml::Value;
 /// let host = get_config_str(&config, "server", "host", "127.0.0.1");
 /// assert_eq!(host, "127.0.0.1");
 /// ```
-pub fn get_config_str<'a>(
+pub fn get_config_str<'a, D>(
     config: &'a Value,
     key: &str,
     second_key: &str,
-    default: &'a str,
-) -> &'a str {
+    default: D,
+) -> Cow<'a, str>
+where
+    D: Into<Cow<'a, str>>,
+{
     match config.get(key).and_then(|k| k.get(second_key)) {
-        Some(v) => v.as_str().unwrap_or_else(|| {
-            panic!(
-                "Configuration error: Expected a string value for '{}.{}', but found a different type.",
-                key, second_key
-            )
-        }),
+        Some(v) => v.as_str()
+            .map(Cow::from)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Configuration error: Expected a string value for '{}.{}', but found a different type.",
+                    key, second_key
+                )
+            }),
         None => {
+            let default_cow = default.into();
             error!(
                 "Configuration error: Unable to find the string value for '{}.{}'. Using default: '{}'.",
-                key, second_key, default
+                key, second_key, default_cow
             );
-            default
+            default_cow
         }
     }
 }
@@ -48,17 +55,26 @@ pub fn get_config_str<'a>(
 /// let port = get_config_int(&config, "server", "port", 8080);
 /// assert_eq!(port, 8080);
 /// ```
-pub fn get_config_int(config: &Value, key: &str, second_key: &str, default: i64) -> i64 {
+pub fn get_config_int(
+    config: &Value,
+    key: impl AsRef<str>,
+    second_key: impl AsRef<str>,
+    default: impl Into<i64>,
+) -> i64 {
+    let key_ref = key.as_ref();
+    let second_key_ref = second_key.as_ref();
+    let default_val = default.into();
+
     config
-        .get(key)
-        .and_then(|k| k.get(second_key))
+        .get(key_ref)
+        .and_then(|k| k.get(second_key_ref))
         .and_then(|v| v.as_integer())
         .unwrap_or_else(|| {
             error!(
                 "Configuration error: Unable to find the integer value for '{}.{}'. Using default: '{}'.",
-                key, second_key, default
+                key_ref, second_key_ref, default_val
             );
-            default
+            default_val
         })
 }
 
