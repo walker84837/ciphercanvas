@@ -148,7 +148,6 @@ async fn main() -> Result<()> {
         .with_context(|| "Failed to parse the TOML configuration file")?;
     info!("TOML configuration parsed successfully.");
 
-    // Process the chosen subcommand
     match args.command.unwrap_or(Commands::Generate {
         ssid: None,
         encryption: Encryption::Wpa,
