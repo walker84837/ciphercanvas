@@ -1,6 +1,6 @@
 # ciphercanvas: Wi-Fi QR Code Generator
 
-A robust and efficient program written in Rust that generates QR codes for Wi-Fi
+A robust and efficient command-line tool written in Rust that generates QR codes for Wi-Fi
 networks. It takes inputs such as SSID, encryption type (WPA or WEP), password,
 and desired output format, producing a QR code that simplifies Wi-Fi access
 sharing.
@@ -13,19 +13,23 @@ sharing.
 
 ## Usage
 
-To generate a Wi-Fi QR code using CipherCanvas:
+To generate a Wi-Fi QR code using CipherCanvas, use the `generate` subcommand with the appropriate options:
 
-1.  **Create a configuration file**: Follow the guidelines in [the
-    documentation](docs/configuration.md) to create a configuration file that
-    includes your Wi-Fi network details.
+``` console
+$ ciphercanvas generate --ssid MyNetwork --password MyPassword --encryption wpa --output qrcode.png --size 512 --foreground "#000000" --background "#ffffff"
+```
 
-2.  **Generate the QR code**: Run the `ccanvas` command with the
-    appropriate options to generate your QR code. This example command creates a
-    `qrcode.svg` file based on your configuration:
-    
-    ``` console
-    $ ccanvas -s wifi4life -e wpa -c your-config-file.toml -o qrcode.svg
-    ```
+Alternatively, you can use a configuration file (e.g., `config.toml`) to specify default values:
+
+``` console
+$ ciphercanvas generate --config ./config.toml --ssid MyNetwork --output qrcode.svg
+```
+
+To save frequently used settings to the default configuration file:
+
+``` console
+$ ciphercanvas save-settings --settings '[wifi]\nssid="MyNetwork"\n[qrcode]\npassword="MyPassword"'
+```
 
 ## Contributing
 
