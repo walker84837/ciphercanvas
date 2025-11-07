@@ -1,7 +1,7 @@
 use crate::error::Error;
 use log::{info, warn};
 use miette::Result;
-use qrcode::{EcLevel, QrCode, render::svg};
+use qrcode::{render::svg, EcLevel, QrCode};
 use std::path::PathBuf;
 
 use crate::image_ops::save_image;

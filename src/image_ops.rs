@@ -4,7 +4,7 @@ use resvg::render;
 use std::{
     fs::File,
     io::{BufWriter, Write},
-    path::PathBuf,
+    path::Path,
 };
 use tiny_skia::{Pixmap, Transform};
 use usvg::{Options, Tree, fontdb};
@@ -56,7 +56,7 @@ fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
 /// let output = PathBuf::from("output.png");
 /// save_image(&output, &format, &image, size).unwrap();
 /// ```
-pub fn save_image(output: &PathBuf, format: &str, image: &str, size: u32) -> Result<(), Error> {
+pub fn save_image(output: &Path, format: &str, image: &str, size: u32) -> Result<(), Error> {
     const SUPPORTED_FORMATS: &[&str] = &["svg", "png"];
     info!(
         "Starting to save image with format '{}' to {:?}",
