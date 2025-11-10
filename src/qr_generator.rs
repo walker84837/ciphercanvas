@@ -1,7 +1,7 @@
 use crate::error::Error;
 use log::{info, warn};
 use miette::Result;
-use qrcode::{render::svg, EcLevel, QrCode};
+use qrcode::{EcLevel, QrCode, render::svg};
 use std::path::PathBuf;
 
 use crate::image_ops::save_image;
@@ -39,6 +39,7 @@ pub fn generate_qr_code(options: QrCodeOptions) -> Result<(), Error> {
         .dark_color(svg::Color(&options.dark_color))
         .light_color(svg::Color(&options.light_color))
         .build();
+
     info!("QR code rendered to image.");
 
     if !options.output_path.is_empty() {

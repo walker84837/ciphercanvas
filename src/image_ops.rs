@@ -3,11 +3,13 @@ use log::{error, info};
 use resvg::render;
 use std::{
     fs::File,
-    io::{BufWriter, Write},
+    io::{BufWriter, prelude::*},
     path::Path,
 };
 use tiny_skia::{Pixmap, Transform};
 use usvg::{Options, Tree, fontdb};
+
+const SUPPORTED_FORMATS: &[&str] = &["svg", "png"];
 
 /// Load and render SVG content into a Pixmap of the specified size.
 fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
@@ -57,7 +59,6 @@ fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
 /// save_image(&output, &format, &image, size).unwrap();
 /// ```
 pub fn save_image(output: &Path, format: &str, image: &str, size: u32) -> Result<(), Error> {
-    const SUPPORTED_FORMATS: &[&str] = &["svg", "png"];
     info!(
         "Starting to save image with format '{}' to {:?}",
         format, output

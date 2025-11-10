@@ -9,19 +9,7 @@ mod qr_generator;
 
 use qr_generator::QrCodeOptions;
 
-/// Mature and modular CLI tool to generate QR codes and customize behavior via scripting.
-///
-/// # Examples
-///
-/// Generate a QR code with a custom configuration:
-/// ```sh
-/// ciphercanvas generate --ssid MyNetwork --output qrcode.svg
-/// ```
-///
-/// Run a custom Lua script to alter tool behavior:
-/// ```sh
-/// ciphercanvas script --script ./customize.lua
-/// ```
+/// Mature and modular CLI tool to generate QR codes.
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct CliArgs {
