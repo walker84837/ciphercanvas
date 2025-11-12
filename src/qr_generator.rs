@@ -10,7 +10,7 @@ pub struct QrCodeOptions {
     pub ssid: String,
     pub encryption: String,
     pub password: String,
-    pub output_path: String,
+    pub output_path: Option<PathBuf>,
     pub dark_color: String,
     pub light_color: String,
     pub size: u32,
@@ -42,16 +42,10 @@ pub fn generate_qr_code(options: QrCodeOptions) -> Result<(), Error> {
 
     info!("QR code rendered to image.");
 
-    if !options.output_path.is_empty() {
-        save_image(
-            &PathBuf::from(options.output_path),
-            &options.format,
-            &image,
-            options.size,
-        )?;
+    if let Some(path) = options.output_path {
+        save_image(&PathBuf::from(path), &options.format, &image, options.size)?;
     } else {
         println!("{}", image);
-        info!("Image output to stdout.");
     }
     Ok(())
 }

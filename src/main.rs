@@ -104,9 +104,7 @@ fn main() -> Result<(), crate::error::Error> {
                 ssid,
                 encryption: encryption.to_string(),
                 password,
-                output_path: output
-                    .map(|p| p.to_str().unwrap().to_string())
-                    .unwrap_or_default(),
+                output_path: output,
                 dark_color: foreground,
                 light_color: background,
                 size,
