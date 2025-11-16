@@ -1,4 +1,5 @@
 use miette::Diagnostic;
+use std::io;
 use thiserror::Error;
 
 #[derive(Error, Debug, Diagnostic)]
@@ -10,5 +11,5 @@ pub enum Error {
     #[error("Unsupported image format: {0}")]
     UnsupportedFormat(String),
     #[error(transparent)]
-    Io(#[from] std::io::Error),
+    Io(#[from] io::Error),
 }
