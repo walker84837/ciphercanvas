@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use log::info;
-
 use std::{fmt, path::PathBuf};
 
 mod error;
@@ -25,9 +24,9 @@ struct CliArgs {
 /// List of available subcommands.
 #[derive(Debug, Subcommand)]
 enum Commands {
-    /// Generate a QR code image from WiFi credentials.
+    /// Generate a QR code image from Wi-Fi credentials.
     Generate {
-        /// The WiFi network's SSID (name)
+        /// The Wi-Fi network's SSID (name)
         #[arg(short, long)]
         ssid: String,
 
@@ -39,7 +38,7 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
 
-        /// The WiFi network's password.
+        /// The Wi-Fi network's password.
         #[arg(short, long)]
         password: String,
 
@@ -58,11 +57,15 @@ enum Commands {
         /// The background color of the QR code (e.g., "#ffffff")]
         #[arg(long, default_value = "#ffffff")]
         background: String,
+
+        /// Overwrite existing files without prompt.
+        #[arg(long, default_value_t = false)]
+        overwrite: bool,
     },
 }
 
-/// Valid encryption types for WiFi.
-#[derive(ValueEnum, Clone, Debug)]
+/// Valid encryption types for Wi-Fi.
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 enum Encryption {
     Wpa,
     Wep,
@@ -76,18 +79,18 @@ impl fmt::Display for Encryption {
             Encryption::Wep => "WEP",
             Encryption::None => "nopass",
         };
-        write!(f, "{}", encryption_str)
+        write!(f, "{encryption_str}")
     }
 }
 
-fn main() -> Result<(), crate::error::Error> {
+fn main() -> Result<(), error::Error> {
     let args = CliArgs::parse();
 
     if args.verbose {
         simple_logger::init().unwrap();
         info!("Verbose logging enabled.");
     }
-    info!("Parsed arguments: {:#?}", args);
+    info!("Parsed arguments: {args:#?}");
 
     match args.command {
         Some(Commands::Generate {
@@ -99,16 +102,18 @@ fn main() -> Result<(), crate::error::Error> {
             format,
             foreground,
             background,
+            overwrite,
         }) => {
             let options = QrCodeOptions {
                 ssid,
                 encryption: encryption.to_string(),
                 password,
                 output_path: output,
-                dark_color: foreground,
-                light_color: background,
+                dark_color: foreground.clone(),
+                light_color: background.clone(),
                 size,
-                format,
+                format: format.clone(),
+                overwrite,
             };
             qr_generator::generate_qr_code(options)?;
         }

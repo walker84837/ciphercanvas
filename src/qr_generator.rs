@@ -1,10 +1,8 @@
-use crate::error::Error;
+use crate::{error::Error, image_ops::save_image};
 use log::{info, warn};
 use miette::Result;
-use qrcode::{EcLevel, QrCode, render::svg};
+use qrcode::{render::svg, EcLevel, QrCode};
 use std::path::PathBuf;
-
-use crate::image_ops::save_image;
 
 pub struct QrCodeOptions {
     pub ssid: String,
@@ -15,6 +13,7 @@ pub struct QrCodeOptions {
     pub light_color: String,
     pub size: u32,
     pub format: String,
+    pub overwrite: bool,
 }
 
 pub fn generate_qr_code(options: QrCodeOptions) -> Result<(), Error> {
@@ -30,7 +29,7 @@ pub fn generate_qr_code(options: QrCodeOptions) -> Result<(), Error> {
     );
 
     let qrcode = QrCode::with_error_correction_level(contents_to_encode.as_bytes(), EcLevel::H)
-        .map_err(|e| Error::QrCode(format!("Failed to generate the QR code: {}", e)))?;
+        .map_err(|e| Error::QrCode(format!("Failed to generate the QR code: {e}")))?;
     info!("QR code generated successfully.");
 
     let image = qrcode
@@ -43,9 +42,15 @@ pub fn generate_qr_code(options: QrCodeOptions) -> Result<(), Error> {
     info!("QR code rendered to image.");
 
     if let Some(path) = options.output_path {
-        save_image(&PathBuf::from(path), &options.format, &image, options.size)?;
+        save_image(
+            &path,
+            &options.format,
+            &image,
+            options.size,
+            options.overwrite,
+        )?;
     } else {
-        println!("{}", image);
+        println!("{image}");
     }
     Ok(())
 }

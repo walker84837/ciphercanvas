@@ -10,6 +10,8 @@ pub enum Error {
     Image(String),
     #[error("Unsupported image format: {0}")]
     UnsupportedFormat(String),
+    #[error("File already exists: {0}")]
+    FileExists(String),
     #[error(transparent)]
     Io(#[from] io::Error),
 }

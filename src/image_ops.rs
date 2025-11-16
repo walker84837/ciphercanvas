@@ -13,14 +13,13 @@ const SUPPORTED_FORMATS: &[&str] = &["svg", "png"];
 
 /// Load and render SVG content into a Pixmap of the specified size.
 fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
-    info!("Loading SVG content with size {}x{}", size, size);
+    info!("Loading SVG content with size {size}x{size}");
 
     let options = Options::default();
     let fontdb = fontdb::Database::new();
     let tree: Tree = Tree::from_data(contents, &options, &fontdb).map_err(|e| {
         Error::Image(format!(
-            "Failed to create SVG tree from data of size {}x{}: {}",
-            size, size, e
+            "Failed to create SVG tree from data of size {size}x{size}: {e}"
         ))
     })?;
 
@@ -58,10 +57,17 @@ fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
 /// let output = PathBuf::from("output.png");
 /// save_image(&output, &format, &image, size).unwrap();
 /// ```
-pub fn save_image(output: &Path, format: &str, image: &str, size: u32) -> Result<(), Error> {
+pub fn save_image(
+    output: &Path,
+    format: &str,
+    image: &str,
+    size: u32,
+    overwrite: bool,
+) -> Result<(), Error> {
     info!(
-        "Starting to save image with format '{}' to {:?}",
-        format, output
+        "Starting to save image with format '{}' to {}",
+        format,
+        output.display()
     );
 
     if !SUPPORTED_FORMATS.contains(&format) {
@@ -70,30 +76,34 @@ pub fn save_image(output: &Path, format: &str, image: &str, size: u32) -> Result
 
     let file_path = output.with_extension(format);
 
+    if file_path.exists() && !overwrite {
+        return Err(Error::FileExists(format!(
+            "File already exists: {}. Use --overwrite to force overwrite.",
+            file_path.display()
+        )));
+    }
+
     match format {
         "svg" => {
             let mut writer = BufWriter::new(File::create(&file_path)?);
             writer.write_all(image.as_bytes())?;
-            info!("Saved SVG image to {:?}", file_path);
+            info!("Saved SVG image to {}", file_path.display());
         }
         "png" => {
             if size <= 256 {
-                error!(
-                    "Warning: Image size is {}x{}, which may result in lower quality.",
-                    size, size
-                );
+                error!("Warning: Image size is {size}x{size}, which may result in lower quality.",);
             }
             let pixmap = load_svg(image.as_bytes(), size)?;
             pixmap
                 .save_png(&file_path)
                 .map_err(|e| Error::Image(e.to_string()))?;
-            info!("Saved PNG image to {:?}", file_path);
+            info!("Saved PNG image to {}", file_path.display());
         }
         _ => {
             return Err(Error::UnsupportedFormat(format.to_string()));
         }
     }
 
-    info!("Image saved successfully to {:?}", file_path);
+    info!("Image saved successfully to {}", file_path.display());
     Ok(())
 }
