@@ -14,4 +14,6 @@ pub enum Error {
     FileExists(String),
     #[error(transparent)]
     Io(#[from] io::Error),
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
 }

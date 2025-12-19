@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use log::info;
 use std::{fmt, path::PathBuf};
@@ -10,7 +11,12 @@ use qr_generator::QrCodeOptions;
 
 /// Mature and modular CLI tool to generate QR codes.
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    author,
+    version,
+    about,
+    long_about = "Mature and modular CLI tool to generate QR codes.\n\nFor more information and to report issues, visit: https://github.com/walker84837/ciphercanvas-rs"
+)]
 struct CliArgs {
     /// Activate verbose mode for detailed logs
     #[arg(short, long)]
@@ -25,6 +31,9 @@ struct CliArgs {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// Generate a QR code image from Wi-Fi credentials.
+    #[command(
+        after_help = "Examples:\n  ciphercanvas generate --ssid MyWifi --password-file ./wifi_pass.txt --output wifi_qr.png\n  ciphercanvas generate --ssid MyGuestWifi --encryption None --output guest_qr.svg\n  echo \"mysecretpassword\" | ciphercanvas generate --ssid MySecureWifi --output secure_qr.png\n  ciphercanvas generate --ssid MyHomeWifi --output home_qr.png (will prompt for password)"
+    )]
     Generate {
         /// The Wi-Fi network's SSID (name)
         #[arg(short, long)]
@@ -38,9 +47,10 @@ enum Commands {
         #[arg(short, long)]
         output: Option<PathBuf>,
 
-        /// The Wi-Fi network's password.
-        #[arg(short, long)]
-        password: String,
+        /// Read the Wi-Fi network's password from the specified file.
+        /// If not provided, the password will be read from stdin.
+        #[arg(long)]
+        password_file: Option<PathBuf>,
 
         /// The size of the QR code image (e.g., 512).
         #[arg(long, default_value_t = 512)]
@@ -83,6 +93,16 @@ impl fmt::Display for Encryption {
     }
 }
 
+// Helper function to read password from file or stdin
+fn get_password(password_file: Option<PathBuf>) -> Result<String> {
+    if let Some(path) = password_file {
+        std::fs::read_to_string(&path)
+            .with_context(|| format!("Could not read password from file: {}", path.display()))
+    } else {
+        rpassword::read_password().context("Could not read password from stdin.")
+    }
+}
+
 fn main() -> Result<(), error::Error> {
     let args = CliArgs::parse();
 
@@ -97,18 +117,21 @@ fn main() -> Result<(), error::Error> {
             ssid,
             encryption,
             output,
-            password,
+            password_file,
             size,
             format,
             foreground,
             background,
             overwrite,
         }) => {
+            let password =
+                get_password(password_file).map_err(error::Error::Anyhow)?;
+
             let options = QrCodeOptions {
                 ssid,
                 encryption: encryption.to_string(),
                 password,
-                output_path: output,
+                output_path: output.clone(), // Clone output for the success message
                 dark_color: foreground.clone(),
                 light_color: background.clone(),
                 size,
@@ -116,6 +139,13 @@ fn main() -> Result<(), error::Error> {
                 overwrite,
             };
             qr_generator::generate_qr_code(options)?;
+
+            if let Some(path) = output {
+                println!(
+                    "QR code successfully generated and saved to \"{}\"",
+                    path.display()
+                );
+            }
         }
         None => {}
     }

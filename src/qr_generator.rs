@@ -1,7 +1,7 @@
 use crate::{error::Error, image_ops::save_image};
 use log::{info, warn};
 use miette::Result;
-use qrcode::{render::svg, EcLevel, QrCode};
+use qrcode::{EcLevel, QrCode, render::svg};
 use std::path::PathBuf;
 
 pub struct QrCodeOptions {

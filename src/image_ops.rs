@@ -94,9 +94,13 @@ pub fn save_image(
                 error!("Warning: Image size is {size}x{size}, which may result in lower quality.",);
             }
             let pixmap = load_svg(image.as_bytes(), size)?;
-            pixmap
-                .save_png(&file_path)
-                .map_err(|e| Error::Image(e.to_string()))?;
+            pixmap.save_png(&file_path).map_err(|e| {
+                Error::Image(format!(
+                    "Failed to save PNG image to {}: {}",
+                    file_path.display(),
+                    e
+                ))
+            })?;
             info!("Saved PNG image to {}", file_path.display());
         }
         _ => {
