@@ -16,20 +16,23 @@ sharing.
 To generate a Wi-Fi QR code using CipherCanvas, use the `generate` subcommand with the appropriate options:
 
 ``` console
-$ ciphercanvas generate --ssid MyNetwork --password MyPassword --encryption wpa --output qrcode.png --size 512 --foreground "#000000" --background "#ffffff"
+$ ciphercanvas generate --ssid MyNetwork --encryption wpa --output qrcode.png --size 512 --foreground "#000000" --background "#ffffff"
 ```
 
-Alternatively, you can use a configuration file (e.g., `config.toml`) to specify default values:
+### Options:
 
-``` console
-$ ciphercanvas generate --config ./config.toml --ssid MyNetwork --output qrcode.svg
-```
+- `--verbose`, `-v`: Activate verbose mode for detailed logs.
+- `--ssid <SSID>`, `-s <SSID>`: The Wi-Fi network's SSID (name). (Required)
+- `--encryption <TYPE>`, `-e <TYPE>`: The encryption type used. Valid values are `wpa`, `wep`, or `None`. (Default: `wpa`)
+- `--password-file <FILE_PATH>`: Read the Wi-Fi network's password from the specified file. If not provided, the password will be read from stdin.
+- `--output <FILE_PATH>`, `-o <FILE_PATH>`: The output file to export the QR code image.
+- `--size <PIXELS>`: The size of the QR code image in pixels (e.g., `512`). (Default: `512`)
+- `--format <FORMAT>`: The output format of the image (e.g., `"svg"`, `"png"`). (Default: `"svg"`)
+- `--foreground <COLOR>`: The foreground color of the QR code (e.g., `"#000000"`). (Default: `"#000000"`)
+- `--background <COLOR>`: The background color of the QR code (e.g., `"#ffffff"`). (Default: `"#ffffff"`)
+- `--overwrite`: Overwrite existing files without prompt. (Default: `false`)
 
-To save frequently used settings to the default configuration file:
 
-``` console
-$ ciphercanvas save-settings --settings '[wifi]\nssid="MyNetwork"\n[qrcode]\npassword="MyPassword"'
-```
 
 ## Contributing
 
