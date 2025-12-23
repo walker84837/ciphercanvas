@@ -124,8 +124,7 @@ fn main() -> Result<(), error::Error> {
             background,
             overwrite,
         }) => {
-            let password =
-                get_password(password_file).map_err(error::Error::Anyhow)?;
+            let password = get_password(password_file).map_err(error::Error::Anyhow)?;
 
             let options = QrCodeOptions {
                 ssid,
@@ -138,13 +137,25 @@ fn main() -> Result<(), error::Error> {
                 format: format.clone(),
                 overwrite,
             };
-            qr_generator::generate_qr_code(options)?;
 
-            if let Some(path) = output {
-                println!(
-                    "QR code successfully generated and saved to \"{}\"",
-                    path.display()
-                );
+            if options.output_path.is_none() {
+                #[cfg(feature = "kitty_graphics")]
+                {
+                    qr_generator::print_qr_code_kitty(&options)?;
+                }
+                #[cfg(not(feature = "kitty_graphics"))]
+                {
+                    qr_generator::generate_qr_code(&options)?;
+                }
+            } else {
+                qr_generator::generate_qr_code(&options)?;
+
+                if let Some(path) = options.output_path {
+                    println!(
+                        "QR code successfully generated and saved to \"{}\"",
+                        path.display()
+                    );
+                }
             }
         }
         None => {}
