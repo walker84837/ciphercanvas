@@ -122,12 +122,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
-name = "base64"
-version = "0.22.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
-
-[[package]]
 name = "bit_field"
 version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -174,9 +168,9 @@ name = "ciphercanvas"
 version = "0.2.1"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
  "clap",
  "image 0.24.9",
+ "kitty_image",
  "log",
  "miette",
  "qrcode",
@@ -489,6 +483,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00810f1d8b74be64b13dbf3db89ac67740615d6c891f0e7b6179326533011a07"
 dependencies = [
  "rayon",
+]
+
+[[package]]
+name = "kitty_image"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59bed8e1e801b75e8a97ecef1d8a3528ec8b38ceafd354691ddde887aac35736"
+dependencies = [
+ "base64",
 ]
 
 [[package]]
@@ -1172,7 +1175,7 @@ version = "0.40.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c04150a94f0bfc3b2c15d4e151524d14cd06765fc6641d8b1c59a248360d4474"
 dependencies = [
- "base64 0.21.7",
+ "base64",
  "data-url",
  "flate2",
  "fontdb",

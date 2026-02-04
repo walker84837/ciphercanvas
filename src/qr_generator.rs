@@ -2,13 +2,10 @@ use crate::{error::Error, image_ops::save_image};
 use log::{info, warn};
 use miette::Result;
 use qrcode::{EcLevel, QrCode, render::svg};
-use resvg::render;
 use std::path::PathBuf;
-use tiny_skia::{Pixmap, Transform};
-use usvg::{Options, Tree, fontdb};
 
 #[cfg(feature = "kitty_graphics")]
-use base64::{engine::general_purpose, prelude::*};
+use kitty_image::{Action, ActionPut, ActionTransmission, Command, Format, Medium, WrappedCommand};
 #[cfg(feature = "kitty_graphics")]
 use std::io::Write;
 
@@ -72,34 +69,30 @@ pub fn print_qr_code_kitty(options: &QrCodeOptions) -> Result<(), Error> {
         .map_err(|e| Error::Image(format!("Failed to encode PNG: {e}")))?;
     info!("Encoded QR code to PNG.");
 
-    let encoded_data = general_purpose::STANDARD.encode(&png_data);
-    let chunks: Vec<&[u8]> = encoded_data.as_bytes().chunks(4096).collect();
-    let num_chunks = chunks.len();
+    let action = Action::TransmitAndDisplay(
+        ActionTransmission {
+            format: Format::Png,
+            medium: Medium::Direct,
+            width: options.size,
+            height: options.size,
+            ..Default::default()
+        },
+        ActionPut {
+            move_cursor: true,
+            ..Default::default()
+        },
+    );
 
+    let mut command = Command::new(action);
+    command.payload = std::borrow::Cow::Borrowed(&png_data);
+
+    let wrapped = WrappedCommand::new(command);
     let mut stdout = std::io::stdout().lock();
-
-    for (i, chunk) in chunks.iter().enumerate() {
-        if i == 0 {
-            // First chunk
-            write!(stdout, "\x1b_Gf=100,a=T,")?;
-        } else {
-            // Subsequent chunks
-            write!(stdout, "\x1b_G")?;
-        }
-
-        if i == num_chunks - 1 {
-            // Last chunk
-            write!(stdout, "m=0;")?;
-        } else {
-            // Not the last chunk
-            write!(stdout, "m=1;")?;
-        }
-
-        stdout.write_all(chunk)?;
-        write!(stdout, "\x1b\\")?;
-    }
+    wrapped
+        .send_chunked(&mut stdout)
+        .map_err(|e| Error::Image(format!("Failed to send to kitty: {}", e)))?;
     stdout.flush()?;
-    println!();
+
     info!("Printed QR code to terminal using Kitty graphics protocol.");
 
     Ok(())
