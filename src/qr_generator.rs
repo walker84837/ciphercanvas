@@ -5,6 +5,8 @@ use qrcode::{EcLevel, QrCode, render::svg};
 use std::path::PathBuf;
 
 #[cfg(feature = "kitty_graphics")]
+use crate::image_ops::load_svg;
+#[cfg(feature = "kitty_graphics")]
 use kitty_image::{Action, ActionPut, ActionTransmission, Command, Format, Medium, WrappedCommand};
 #[cfg(feature = "kitty_graphics")]
 use std::io::Write;
@@ -19,27 +21,6 @@ pub struct QrCodeOptions {
     pub size: u32,
     pub format: String,
     pub overwrite: bool,
-}
-
-#[cfg(feature = "kitty_graphics")]
-fn load_svg_for_kitty(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
-    info!("Loading SVG content with size {size}x{size}");
-
-    let options = Options::default();
-    let fontdb = fontdb::Database::new();
-    let tree: Tree = Tree::from_data(contents, &options, &fontdb).map_err(|e| {
-        Error::Image(format!(
-            "Failed to create SVG tree from data of size {size}x{size}: {e}"
-        ))
-    })?;
-
-    let mut pixmap: Pixmap =
-        Pixmap::new(size, size).ok_or(Error::Image("Failed to create a new Pixmap".to_string()))?;
-
-    render(&tree, Transform::default(), &mut pixmap.as_mut());
-    info!("Rendered SVG to Pixmap");
-
-    Ok(pixmap)
 }
 
 #[cfg(feature = "kitty_graphics")]
@@ -63,7 +44,7 @@ pub fn print_qr_code_kitty(options: &QrCodeOptions) -> Result<(), Error> {
         .build();
     info!("QR code rendered to SVG.");
 
-    let pixmap = load_svg_for_kitty(image_svg.as_bytes(), options.size)?;
+    let pixmap = load_svg(image_svg.as_bytes(), options.size)?;
     let png_data = pixmap
         .encode_png()
         .map_err(|e| Error::Image(format!("Failed to encode PNG: {e}")))?;
@@ -92,6 +73,7 @@ pub fn print_qr_code_kitty(options: &QrCodeOptions) -> Result<(), Error> {
         .send_chunked(&mut stdout)
         .map_err(|e| Error::Image(format!("Failed to send to kitty: {}", e)))?;
     stdout.flush()?;
+    println!();
 
     info!("Printed QR code to terminal using Kitty graphics protocol.");
 
