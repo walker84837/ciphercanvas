@@ -12,7 +12,7 @@ use usvg::{Options, Tree, fontdb};
 const SUPPORTED_FORMATS: &[&str] = &["svg", "png"];
 
 /// Load and render SVG content into a Pixmap of the specified size.
-fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
+pub(crate) fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
     info!("Loading SVG content with size {size}x{size}");
 
     let options = Options::default();
@@ -23,7 +23,7 @@ fn load_svg(contents: &[u8], size: u32) -> Result<Pixmap, Error> {
         ))
     })?;
 
-    let mut pixmap: Pixmap =
+    let mut pixmap =
         Pixmap::new(size, size).ok_or(Error::Image("Failed to create a new Pixmap".to_string()))?;
 
     render(&tree, Transform::default(), &mut pixmap.as_mut());

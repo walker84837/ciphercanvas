@@ -9,6 +9,38 @@ mod qr_generator;
 
 use qr_generator::QrCodeOptions;
 
+/// Validate a hex color string (e.g. "#000000" or "#ffffff").
+fn validate_hex_color(color: &str) -> Result<(), String> {
+    if !color.starts_with('#') {
+        return Err(format!("Color must start with '#': {color}"));
+    }
+    let hex = &color[1..];
+    if hex.len() != 6 {
+        return Err(format!(
+            "Color must be 6 hex digits after '#': {color} (got {} digits)",
+            hex.len()
+        ));
+    }
+    if u32::from_str_radix(hex, 16).is_err() {
+        return Err(format!("Color contains invalid hex digits: {color}"));
+    }
+    Ok(())
+}
+
+/// Helper: generate QR code to file, or display in terminal (if kitty_graphics feature enabled and no output path).
+#[cfg(feature = "kitty_graphics")]
+fn generate_or_display_qr(options: &QrCodeOptions) -> Result<(), error::Error> {
+    if options.output_path.is_none() {
+        return qr_generator::print_qr_code_kitty(options);
+    }
+    qr_generator::generate_qr_code(options)
+}
+
+#[cfg(not(feature = "kitty_graphics"))]
+fn generate_or_display_qr(options: &QrCodeOptions) -> Result<(), error::Error> {
+    qr_generator::generate_qr_code(options)
+}
+
 /// Mature and modular CLI tool to generate QR codes.
 #[derive(Debug, Parser)]
 #[command(
@@ -124,23 +156,29 @@ fn main() -> Result<(), error::Error> {
             background,
             overwrite,
         }) => {
-            let password =
-                get_password(password_file).map_err(error::Error::Anyhow)?;
+            let password = get_password(password_file)
+                .map_err(error::Error::Anyhow)?
+                .trim_end()
+                .to_string();
+
+            validate_hex_color(&foreground).map_err(error::Error::InvalidColor)?;
+            validate_hex_color(&background).map_err(error::Error::InvalidColor)?;
 
             let options = QrCodeOptions {
                 ssid,
                 encryption: encryption.to_string(),
                 password,
-                output_path: output.clone(), // Clone output for the success message
-                dark_color: foreground.clone(),
-                light_color: background.clone(),
+                output_path: output.clone(),
+                dark_color: foreground,
+                light_color: background,
                 size,
-                format: format.clone(),
+                format,
                 overwrite,
             };
-            qr_generator::generate_qr_code(options)?;
 
-            if let Some(path) = output {
+            generate_or_display_qr(&options)?;
+
+            if let Some(path) = options.output_path {
                 println!(
                     "QR code successfully generated and saved to \"{}\"",
                     path.display()
