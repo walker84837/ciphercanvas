@@ -25,12 +25,8 @@ pub struct QrCodeOptions {
 
 #[cfg(feature = "kitty_graphics")]
 pub fn print_qr_code_kitty(options: &QrCodeOptions) -> Result<(), Error> {
-    let contents_to_encode = format!(
-        "WIFI:S:{};T:{};P:{};;",
-        options.ssid,
-        options.encryption.to_uppercase(),
-        options.password
-    );
+    let contents_to_encode =
+        build_wifi_qr_payload(&options.ssid, &options.encryption, &options.password);
 
     let qrcode = QrCode::with_error_correction_level(contents_to_encode.as_bytes(), EcLevel::H)
         .map_err(|e| Error::QrCode(format!("Failed to generate the QR code: {e}")))?;
@@ -85,12 +81,8 @@ pub fn generate_qr_code(options: &QrCodeOptions) -> Result<(), Error> {
         warn!("Image size is lower than 256. The resulting QR code may appear cropped.");
     }
 
-    let contents_to_encode = format!(
-        "WIFI:S:{};T:{};P:{};;",
-        options.ssid,
-        options.encryption.to_uppercase(),
-        options.password
-    );
+    let contents_to_encode =
+        build_wifi_qr_payload(&options.ssid, &options.encryption, &options.password);
 
     let qrcode = QrCode::with_error_correction_level(contents_to_encode.as_bytes(), EcLevel::H)
         .map_err(|e| Error::QrCode(format!("Failed to generate the QR code: {e}")))?;
@@ -117,4 +109,64 @@ pub fn generate_qr_code(options: &QrCodeOptions) -> Result<(), Error> {
         println!("{image}");
     }
     Ok(())
+}
+
+/// Build the standard Wi-Fi QR code payload string.
+///
+/// Format: `WIFI:S:<ssid>;T:<encryption>;P:<password>;;`
+/// See: <https://github.com/zxing/zxing/wiki/Barcode-Contents#wi-fi-network-config-android-ios-11>
+fn build_wifi_qr_payload(ssid: &str, encryption: &str, password: &str) -> String {
+    format!(
+        "WIFI:S:{};T:{};P:{};;",
+        ssid,
+        encryption.to_uppercase(),
+        password
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wifi_qr_format_basic() {
+        let payload = build_wifi_qr_payload("MyNetwork", "WPA", "secret123");
+        assert_eq!(payload, "WIFI:S:MyNetwork;T:WPA;P:secret123;;");
+    }
+
+    #[test]
+    fn wifi_qr_format_none_encryption() {
+        let payload = build_wifi_qr_payload("GuestWifi", "None", "nopass");
+        assert_eq!(payload, "WIFI:S:GuestWifi;T:NONE;P:nopass;;");
+    }
+
+    #[test]
+    fn wifi_qr_format_lowercase_encryption_uppercased() {
+        let payload = build_wifi_qr_payload("Home", "wpa", "password");
+        assert_eq!(payload, "WIFI:S:Home;T:WPA;P:password;;");
+    }
+
+    #[test]
+    fn wifi_qr_format_wep() {
+        let payload = build_wifi_qr_payload("OldNetwork", "WEP", "wepkey");
+        assert_eq!(payload, "WIFI:S:OldNetwork;T:WEP;P:wepkey;;");
+    }
+
+    #[test]
+    fn wifi_qr_empty_ssid() {
+        let payload = build_wifi_qr_payload("", "WPA", "password");
+        assert_eq!(payload, "WIFI:S:;T:WPA;P:password;;");
+    }
+
+    #[test]
+    fn wifi_qr_empty_password() {
+        let payload = build_wifi_qr_payload("MyNetwork", "None", "");
+        assert_eq!(payload, "WIFI:S:MyNetwork;T:NONE;P:;;");
+    }
+
+    #[test]
+    fn wifi_qr_special_chars_in_ssid() {
+        let payload = build_wifi_qr_payload("My;Network", "WPA", "pass;word");
+        assert_eq!(payload, "WIFI:S:My;Network;T:WPA;P:pass;word;;");
+    }
 }

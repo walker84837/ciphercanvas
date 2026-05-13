@@ -12,6 +12,8 @@ pub enum Error {
     UnsupportedFormat(String),
     #[error("File already exists: {0}")]
     FileExists(String),
+    #[error("Invalid color value: {0}")]
+    InvalidColor(String),
     #[error(transparent)]
     Io(#[from] io::Error),
     #[error(transparent)]
