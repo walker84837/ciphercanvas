@@ -115,12 +115,27 @@ pub fn generate_qr_code(options: &QrCodeOptions) -> Result<(), Error> {
 ///
 /// Format: `WIFI:S:<ssid>;T:<encryption>;P:<password>;;`
 /// See: <https://github.com/zxing/zxing/wiki/Barcode-Contents#wi-fi-network-config-android-ios-11>
+fn escape_wifi_value(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    for c in input.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            ';' => out.push_str("\\;"),
+            ',' => out.push_str("\\,"),
+            ':' => out.push_str("\\:"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 fn build_wifi_qr_payload(ssid: &str, encryption: &str, password: &str) -> String {
+    let ssid_escaped = escape_wifi_value(ssid);
+    let password_escaped = escape_wifi_value(password);
+    let encryption_escaped = escape_wifi_value(&encryption.to_uppercase());
     format!(
         "WIFI:S:{};T:{};P:{};;",
-        ssid,
-        encryption.to_uppercase(),
-        password
+        ssid_escaped, encryption_escaped, password_escaped
     )
 }
 
@@ -166,7 +181,7 @@ mod tests {
 
     #[test]
     fn wifi_qr_special_chars_in_ssid() {
-        let payload = build_wifi_qr_payload("My;Network", "WPA", "pass;word");
-        assert_eq!(payload, "WIFI:S:My;Network;T:WPA;P:pass;word;;");
+        let payload = build_wifi_qr_payload("My\\Network", "WPA", "pass\\word");
+        assert_eq!(payload, "WIFI:S:My\\\\Network;T:WPA;P:pass\\\\word;;");
     }
 }
